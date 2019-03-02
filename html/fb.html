@@ -38,7 +38,10 @@
                 <tr>
                     <th>id</th>
                     <th>name</th>
+                    <th>category</th>
+                    <th>tag</th>
                     <th>relation</th>
+                    <th>likes</th>
                     <th>comments</th>
                     <th>total_comments</th>
                     <th>posts</th>
@@ -57,7 +60,9 @@
                 <thead>
                     <tr>
                         <th>id</th>
+                        <th>type</th>
                         <th>relation</th>
+                        <th>likes</th>
                         <th>comments</th>
                         <th>normalized_comments_count</th>
                         <th>score</th>
@@ -93,17 +98,17 @@
                 "info": true,
                 "searching": true,
                 "bSort": false,
-                "data": [{
-                    "avg_comments_count": "359.67",
-                    "comments_count": 1079,
-                    "id": "124616330906800",
-                    "name": '<a href="#object" onclick="select(' + "124616330906800" + ')">' + "東森新聞" + '</a>',
-                    "posts_count": 3,
-                    "relation": 0.001617900029649759,
-                    "total_comments_count": 358441,
-                    "total_posts_count": 4664,
-                    "score": 1000,
-                }],
+                // "data": [{
+                //     "avg_comments_count": "359.67",
+                //     "comments_count": 1079,
+                //     "id": "124616330906800",
+                //     "name": '<a href="#object" onclick="select(' + "124616330906800" + ')">' + "東森新聞" + '</a>',
+                //     "posts_count": 3,
+                //     "relation": 0.001617900029649759,
+                //     "total_comments_count": 358441,
+                //     "total_posts_count": 4664,
+                //     "score": 1000,
+                // }],
                 "columns": [
                     {
                         "data": "id",
@@ -116,7 +121,10 @@
                         }
                     },
                     { "data": "name", },
+                    { "data": "category" },
+                    { "data": "tag" },
                     { "data": "relation" },
+                    { "data": "likes_count" },
                     { "data": "comments_count" },
                     { "data": "total_comments_count" },
                     { "data": "posts_count" },
@@ -141,7 +149,9 @@
                             return data
                         }
                     },
+                    { "data": "type" },
                     { "data": "relation" },
+                    { "data": "likes_count" },
                     { "data": "comments_count" },
                     { "data": "normalized_comments_count"},
                     { "data": "score" },
@@ -181,7 +191,9 @@
         for (let [key, value] of Object.entries(window.response.history[object_id])) {
             SUB_TABLE.row.add({
                 "id": key,
+                "type": value['type'],
                 "relation": value['relation'],
+                "likes_count": value['likes_count'],
                 "comments_count": value['comments_count'],
                 "normalized_comments_count": value['normalized_comments_count'],
                 "score": value['score'],
@@ -243,7 +255,7 @@
             method: 'POST',
             body: JSON.stringify(data)
         }
-        const query_entity =  fetch('http://140.112.30.226:9527/api/query/fb/', requestOptions).then(
+        const query_entity =  fetch('http://localhost:8000/api/query/fb/', requestOptions).then(
             response => {
                     // if (!response.ok) {
                     //     return Promise.reject(response.statusText)

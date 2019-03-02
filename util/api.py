@@ -24,10 +24,10 @@ ptt_posts = database["2018_ptt_posts"]
 ptt_comments = database['2018_ptt_comments']
 
 def default_options(start, end):
-    return {'datetime_pub': {'$gte': datetime(2018, start, 1), '$lt': datetime(2018, end, 1)}}
+    return {'datetime_pub': {'$gte': datetime(2018, int(start), 1), '$lt': datetime(2018, int(end), 1)}}
 
 def default_fields():
-    return {'id':1, 'parent_id':1, 'parent_name': 1, 'comments_count': 1, 'global_tfidf': 1, "datetime_pub": 1}
+    return {'id':1, 'parent_id':1, 'parent_name': 1,'comments_count': 1, "datetime_pub": 1}
 
 def rank_fb_posts(query_word, fb_id, start, end):
     post_score = defaultdict(list)

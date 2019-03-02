@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import pickle as pkl
 import matplotlib.pyplot as plt
 import re
 import jieba
@@ -12,20 +13,15 @@ from matplotlib.font_manager import FontManager
 from pylab import mpl 
 
 
-jieba.load_userdict('C:/Users/Waynet/venv/Lib/site-packages/jieba/dict.blue.txt')
+jieba.load_userdict('C:/Users/choose/venv/Lib/site-packages/jieba/dict.blue.txt')
 
 def load_stopwords():
-    stopwords = []
-    with open('stopwords.txt', 'r') as f:
-         words = f.readlines()
-    f.close()
-    for word in words:
-        if word[:-1] not in stopwords:
-            stopwords.append(word[:-1])
+    with open('util/stopwords.pkl', 'rb') as f:
+         stopwords = pkl.load(f)
     return stopwords
 def load_symbols():
     ret = []
-    with open('symbols_20181216.txt', 'r', encoding='utf-8') as f:
+    with open('util/symbols_20181216.txt', 'r', encoding='utf-8') as f:
         rows = f.readlines()
     f.close()
     for row in rows:
@@ -40,20 +36,6 @@ def load_pattern():
         if symbol in '[]()-': symbol = '\\' + symbol
         symbols_str += symbol
     return re.compile('([0-9]+|\.+|[a-zA-Z])|[{}]+'.format(symbols_str))
-def filter_empty_articles(articles):
-    ret = []
-    for article in articles:
-        if type(article) is not float:
-            ret.append(article)
-    return ret
-def to_sentence(document):
-    ret = list()
-    rule = re.compile('[\W]+')
-    result = rule.split(document)
-    for sentence in result:
-        if len(sentence) > 0:
-            ret.append(sentence)
-    return ret
 
 def tokenize(corpus, stopwords=load_stopwords(), pattern=re.compile('[\WA-Za-z0-9]+')):
     tokenized_corpus = []
@@ -65,14 +47,3 @@ def tokenize(corpus, stopwords=load_stopwords(), pattern=re.compile('[\WA-Za-z0-
             words.append(word)
         tokenized_corpus.append(words)
     return tokenized_corpus
-
-def train_word_embedding(filename, model):
-    df = pd.read_csv('./data/fb_posts/{}'.format(filename), sep=',', encoding='utf-8')
-    contents = filter_empty_articles(df['content'])
-    tokenized_contents = tokenize(contents)
-    model.train(tokenized_contents, total_examples=len(tokenized_contents), epochs=5)
-    try:
-        model.save('model/word2vec/{}.model'.format(filename[:-4]))
-    except:
-        print('cannnot save the model')
-    return model
