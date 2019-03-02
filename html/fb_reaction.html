@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Test</title>
+</head>
+<link rel="stylesheet" type="text/css" href="semantic/semantic.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.min.css">
+<script
+  src="https://code.jquery.com/jquery-3.1.1.min.js"
+  integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
+  crossorigin="anonymous">
+</script>
+<script src="https://momentjs.com/downloads/moment.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.3/Chart.min.js"></script>
+<script src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.min.js"></script>
+<script src="semantic/semantic.min.js"></script>
+<body>
+    <div>
+        <div class="ui input">
+            <input type="text" name="keyword" id="keyword" placeholder="關鍵字" value="柯基">
+            <input type="date" name="start" id="start" value="3">
+            <input type="date" name="end" id="end" value="4">
+        </div>
+        <button class="ui primary button" name="submit" onclick="query()">查詢</button>
+        <br><br>
+        <!-- <div class="ui segment">
+            <div class="ui dropdown">
+                <div ckass="text"></div>
+                <i class="dropdown icon"></i>
+            </div>
+        </div> -->
+        <table class="display" id="main">
+            <thead>
+                <tr>
+                    <th>id</th>
+                    <th>name</th>
+                    <th>relation</th>
+                    <th>comments</th>
+                    <th>reaction</th>
+                    <th>posts</th>
+                    <th>total_comments</th>
+                    <th>total_reaction</th>
+                    <th>total_posts</th>
+                    <th>comments/posts</th>
+                    <th>reaction/posts</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        <br><br>
+        <div id="object">
+            <h3 class="ui header" id="object_name"></h3>
+            <canvas id="chart" witdh="400" height="200"></canvas>
+            <table class="display" id="sub">
+                <thead>
+                    <tr>
+                        <th>id</th>
+                        <th>relation</th>
+                        <th>comments</th>
+                        <th>reaction</th>
+                        <th>datetime</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+</body>
+<script>
+    let MAIN_TABLE = null;
+    let SUB_TABLE = null;
+    
+    window.chartColors = {
+        red: 'rgb(255, 99, 132)',
+        orange: 'rgb(255, 159, 64)',
+        yellow: 'rgb(255, 205, 86)',
+        green: 'rgb(75, 192, 192)',
+        blue: 'rgb(54, 162, 235)',
+        purple: 'rgb(153, 102, 255)',
+        grey: 'rgb(201, 203, 207)'
+    };
+
+    let config = null;
+    $( document ).ready(() => {
+        let color = Chart.helpers.color
+
+        MAIN_TABLE = $("#main").DataTable({
+                "paging": true,
+                "info": true,
+                "searching": true,
+                "bSort": false,
+                "data": [{
+                    "id": "124616330906800",
+                    "name": '<a href="#object" onclick="select(' + "124616330906800" + ')">' + "東森新聞" + '</a>',
+                    "relation": 0.0016,
+                    "comments_count": 1079,
+                    "reaction_count": 100,
+                    "posts_count": 3,
+                    "total_comments_count": 358441,
+                    "total_reaction_count": 20,
+                    "total_posts_count": 4664,
+                    "avg_comments_count": "359.67",
+                    "avg_reaction_count": "23.2"
+                }],
+                "columns": [
+                    {
+                        "data": "id",
+                        "render": ( data, type, row, meta ) => {
+                            if (type === "display") {
+                                let link = "https://facebook.com/" + data
+                                data = '<a href="' + link + '">' + data + '</a>'
+                            }
+                            return data
+                        }
+                    },
+                    { "data": "name", },
+                    { "data": "relation" },
+                    { "data": "comments_count" },
+                    { "data": "reaction_count"},
+                    { "data": "posts_count" },
+                    { "data": "total_comments_count" },
+                    { "data": "total_reaction_count"},
+                    { "data": "total_posts_count" },
+                    { "data": "avg_comments_count" },
+                    { "data": "avg_reaction_count"},
+                ]
+            })
+        SUB_TABLE = $("#sub").DataTable({
+                "paging": true,
+                "info": true,
+                "searching": true,
+                "bSort": false,
+                "columns": [
+                    {
+                        "data": "id",
+                        "render": ( data, type, row, meta ) => {
+                            if (type === "display") {
+                                let link = "https://facebook.com/" + data
+                                data = '<a href="' + link + '">' + data + '</a>'
+                            }
+                            return data
+                        }
+                    },
+                    { "data": "relation" },
+                    { "data": "comments_count" },
+                    { "data": "reaction_count" },
+                    { "data": "datetime" }
+                ]
+        })
+    })
+    const select = (index) => {
+        SUB_TABLE.clear()
+        let object_id = window.response.data[index]['id']
+        let object_name = window.response.data[index]['name']
+        let ctx = $("#chart")[0].getContext("2d")
+        let color = Chart.helpers.color
+        let datasets = [{
+                label: "relation",
+                backgroundColor: color(window.chartColors.red).alpha(0.5).rgbString(),
+                borderColor: window.chartColors.red,
+                fill: false,
+                data: [],
+                lineTension: 0,
+            }, {
+                label: "comments",
+                backgroundColor: color(window.chartColors.blue).alpha(0.5).rgbString(),
+                borderColor: window.chartColors.blue,
+                fill: false,
+                data: [],
+                lineTension: 0,
+            }, {
+                label: "reaction",
+                backgroundColor: color(window.chartColors.greem).alpha(0.5).rgbString(),
+                borderColor: window.chartColors.green,
+                fill: false,
+                data: [],
+                lineTension: 0,
+            }]
+        $("#object_name").text(object_name)
+        for (let [key, value] of Object.entries(window.response.history[object_id])) {
+            SUB_TABLE.row.add({
+                "id": key,
+                "relation": value["relation"],
+                "comments_count": value["comments_count"],
+                "reaction_count": value["reaction_count"],
+                "datetime": moment(value["datetime_pub"]["$date"]).format('lll')
+            }).draw( false )
+            // relation curve
+            datasets[0]['data'].push({y: value["relation"], x: moment(value["datetime_pub"]["$date"]).toDate()})
+            // comments_count curve
+            datasets[1]['data'].push({y: value["normalized_comments_count"], x: moment(value["datetime_pub"]["$date"]).toDate()})
+            datasets[2]['data'].push({y: value["normalized_reaction_count"], x: moment(value["datetime_pub"]["$date"]).toDate()})
+        }
+
+        window.myLine = new Chart(ctx, {
+            type: "line",
+            data: {'datasets': datasets},
+            options: {
+				responsive: true,
+				title: {
+					display: true,
+					text: 'Comments & Reaction & Relation'
+				},
+				scales: {
+					xAxes: [{
+						type: 'time',
+						display: true,
+						scaleLabel: {
+							display: true,
+							labelString: 'Date'
+						},
+						ticks: {
+							major: {
+								fontStyle: 'bold',
+								fontColor: '#FF0000'
+							}
+						}
+					}],
+					yAxes: [{
+						display: true,
+						scaleLabel: {
+							display: true,
+							labelString: 'value'
+						}
+					}]
+				}
+			}
+        })
+    }
+    const query = () => {
+        $(".ui.segment").dimmer("show")
+        let data ={
+            keyword: $('#keyword')[0].value,
+            start: $('#start')[0].value,
+            end: $('#end')[0].value
+
+        }
+        console.log(data)
+        let requestOptions = {
+            headers: {'Content-Type': 'application/json'},
+            method: 'POST',
+            body: JSON.stringify(data)
+        }
+        const query_entity =  fetch('http://140.112.30.226:9527/api/query/fb/reaction/', requestOptions).then(
+            response => {
+                    // if (!response.ok) {
+                    //     return Promise.reject(response.statusText)
+                    // }
+                    return response.json()
+            }
+        ).then( result => {
+            MAIN_TABLE.clear()
+            window.response = result
+            result.data.map(( value, index ) => {
+                let row = Object.assign({}, value)
+                row["name"] = `<a href="#object" onclick=select(${index})>${value['name']}</a>`
+                MAIN_TABLE.row.add(row).draw( false )
+            })
+            $(".ui.segment").dimmer("hide")
+            console.log(result)
+            
+        })
+        // requestOptions = {
+        //     headers: {'Content-Type': 'application/json'},
+        //     method: 'POST',
+        //     body: JSON.stringify({ keyword: $('#keyword')[0].value })
+        // }
+        // const query_similart = fetch('http://140.112.30.226:9527/api/query/similar/', requestOptions).then(
+        //     response => {
+        //         return response.json()
+        //     }
+        // ).then( result => {
+        //     $(".ui.dropdown").dropdown({
+        //         values: result.map(( value, index ) => {
+        //             return {
+        //                 name: `${value[0]}: ${value[1]}`,
+        //                 value: value[1]
+        //             }
+        //         })
+        //     })
+        //     console.log(result)
+        // })
+    }
+
+</script>
+</html>
