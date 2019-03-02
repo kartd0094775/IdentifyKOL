@@ -46,7 +46,16 @@ def filter_empty_articles(articles):
         if type(article) is not float:
             ret.append(article)
     return ret
-def tokenize(corpus, stopwords=load_stopwords(), pattern=load_pattern()):
+def to_sentence(document):
+    ret = list()
+    rule = re.compile('[\W]+')
+    result = rule.split(document)
+    for sentence in result:
+        if len(sentence) > 0:
+            ret.append(sentence)
+    return ret
+
+def tokenize(corpus, stopwords=load_stopwords(), pattern=re.compile('[\WA-Za-z0-9]+')):
     tokenized_corpus = []
     for doc in corpus:
         tokenized_doc = jieba.lcut(doc)
