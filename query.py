@@ -189,109 +189,6 @@ def fb_query():
     print(f'\n{time() - it}')
     return ret
 
-# fb/reaction
-@query_page.route('/fb/reaction/', methods=['POST'])
-def fb_reaction_query():
-    """
-    Get relative fb_objects by keyword.
-    ---
-    tags:
-        - query
-    parameters:
-        - name: payload
-          in: body
-          type: object
-          properties:
-              keyword:
-                  type: string
-              default: {"keyword":"化妝品", "start_date": "2018-01-01", "end_date": "2018-12-31"}
-    responses:
-        200:
-            ret: return value
-    """
-    pt = time()
-    req = request.get_json()
-    query_word = req['keyword']
-    start = req['start']
-    end = req['end']
-    print(req)
-
-    obj_score = dict()
-    history = defaultdict(dict)
-    alpha = 0.5
-    
-    for obj in fb_objects.find({'tfidf': {"$ne": None}}):
-        tfidf = dict(obj['tfidf'])
-        name = obj['name']
-        title_relation = 0 if query_word not in name else 1
-
-        if query_word in tfidf:
-            properties = defaultdict(int)
-            properties['relation'] = tfidf[query_word]
-
-            options = default_options(start, end)
-            options['parent_id'] = str(obj['id'])
-            options['reaction_count'] = {'$ne': None, '$ne': float('nan')}
-            field = default_fields()
-            field['reaction_count'] = 1
-
-            for post in fb_posts.find(options, fields, no_cursor_timeout=True).sort([('datetime_pub', 1)]):
-                _id = post['id']
-                parent_id = post['parent_id']
-                comments_count = post['comments_count']
-                datetime_pub = post['datetime_pub']
-                reaction_count = json.loads(post['reaction_count'])
-                reaction_count =int(np.sum(list(reaction_count.values()), axis=0))
-                
-                properties['total_reaction_count'] += reaction_count
-                properties['total_comments_count'] += comments_count
-                properties['total_posts_count'] += 1
-                if 'global_tfidf' in post and query_word in dict(post['global_tfidf']):
-                    relation = dict(post['global_tfidf'])[query_word]
-                    normalized_reaction_count = np.log(1 + reaction_count)
-                    normalized_comments_count = np.log(1 + comments_count)
-                    history[parent_id][_id] = {
-                        'relation': '{0:.4f}'.format(relation),
-                        'comments_count': comments_count,
-                        'normalized_comments_count': normalized_comments_count,
-                        'reaction_count': reaction_count,
-                        'normalized_reaction_count': normalized_reaction_count,
-                        'datetime_pub': datetime_pub
-                    }
-                    properties['reaction_count'] += reaction_count
-                    properties['comments_count'] += comments_count
-                    properties['posts_count'] += 1                    
-                    properties['score'] += (title_relation * alpha + relation * (1 - alpha)) * normalized_reaction_count
-
-            if properties['score'] != 0:
-                obj_score[obj['id']] = properties
-
-    result = sorted(obj_score.items(), key=lambda obj: obj[1]['score'], reverse=True)
-    
-    data = list()
-    for obj, props in result:
-        obj = find_fb_obj(obj)
-        row = {
-            'id': obj['id'],
-            'name': obj['name'],
-            'relation': '{0:.4f}'.format(props['relation']),
-            'comments_count': props['comments_count'],
-            'reaction_count': props['reaction_count'],
-            'posts_count': props['posts_count'],
-            'total_comments_count': props['total_comments_count'],
-            'total_reaction_count': props['total_reaction_count'],
-            'total_posts_count': props['total_posts_count'],
-            'avg_comments_count': '{0:.2f}'.format(props['comments_count'] / props['posts_count']),
-            'avg_reaction_count': '{0:.2f}'.format(props['reaction_count'] / props['posts_count'])
-        }
-        data.append(row)
-
-    ret = json.dumps({'data': data, 'history': history}, default=json_util.default)
-    print(time() - pt)
-    return ret
-
-
-
 @query_page.route('/ptt/', methods=['POST'])
 def ptt_query():
     it = time()
@@ -373,92 +270,33 @@ def ptt_query():
     print(f'\n{time() - it}')
     return ret
 
-
-# @query_page.route('/fb/fulltext/', methods=['POST'])
-# def fb_fulltext_query():
-#     """
-#     Get relative fb_objects by keyword.
-#     ---
-#     tags:
-#         - query
-#     parameters:
-#         - name: payload
-#           in: body
-#           type: object
-#           properties:
-#               keyword:
-#                   type: string
-#               default: {"keyword":"化妝品", "start_date": "2018-01-01", "end_date": "2018-12-31"}
-#     responses:
-#         200:
-#             ret: return value
-#     """
-#     it = time()
-#     req = request.get_json()
-#     query_word = req['keyword']
-#     start = req['start']
-#     end = req['end']
-#     print(req)
-
-#     obj_score = defaultdict(lambda: defaultdict(int))
-#     history = defaultdict(dict)
-#     alpha = 0.5
+def rank_theme(fb_id):
+    keywords = defaultdict(lambda: defaultdict(int))
+    options = {'datetime_pub': {'$gte': datetime(2018, 3, 1), '$lt': datetime(2018, 6, 1)}}
+    options['parent_id'] = fb_id
+    options['sentence'] = {'$ne': None}
+    posts = list(fb_posts.find(options).sort([('datetime_pub', 1)]))
     
-#     cnt = 0
-#     for post in fb_posts_list:
-#         if post['datetime_pub'] < datetime(2018, int(start), 1) or post['datetime_pub'] >= datetime(2018, int(end), 1): continue
-#         if cnt % 10000 == 0:
-#             sys.stdout.write(f"\r{cnt}")
-#         cnt += 1
-#         _id = post['id']
-#         parent_id = post['parent_id']
-#         parent_name = post['parent_name'] if post['parent_name'] != None else ''
-#         comments_count = post['comments_count']
-#         datetime_pub = post['datetime_pub']
+    for post in posts:
+        sentence = post['sentence'].split()
+        tokenized = list(itertools.chain.from_iterable(tokenize(sentence)))
+        if len(tokenized) > 0:
+            for word in tokenized:
+                wordset = find_synonyms(word)
+                word_class = " ".join(sorted(wordset.keys(), key=lambda x: x[0]))
+                prog = re.compile( "|".join(list(map(lambda x: "(" + x + ")", list(wordset.keys())))) )
+                freq = len(prog.findall(post['sentence']))
+                
+                relation = bm25(freq, len(tokenized))
+                comments_count = post['comments_count']
+                reaction_count = None if str(post['reaction_count']) == 'nan' else json.loads(post['reaction_count'])
+                likes_count = 0 if reaction_count == None else int(np.sum(list(reaction_count.values())))
 
-#         obj_score[parent_id]['id'] = parent_id
-#         obj_score[parent_id]['name'] = parent_name
-#         obj_score[parent_id]['total_comments_count'] += comments_count
-#         obj_score[parent_id]['total_posts_count'] += 1
-#         title_relation = 0 if query_word not in parent_name else 1
-
-#         if 'content' in post and str(post['content']) != 'nan':
-#             words_freq = len(re.findall(f'{(query_word)}', post['content']))
-#             if words_freq > 0:
-#                 relation = words_freq
-#                 normalized_comments_count = np.log(1 + post['comments_count'])
-#                 score = relation * normalized_comments_count
-#                 if score > 0:
-#                     history[parent_id][_id] = {
-#                         'relation': relation,
-#                         'comments_count': comments_count,
-#                         'normalized_comments_count': normalized_comments_count,
-#                         'datetime_pub': datetime_pub,
-#                         'score': score
-#                     }
-#                 obj_score[parent_id]['relation'] += relation
-#                 obj_score[parent_id]['comments_count'] += comments_count
-#                 obj_score[parent_id]['posts_count'] += 1                    
-#                 obj_score[parent_id]['score'] += score
-
-#     result = sorted(obj_score.items(), key=lambda obj: obj[1]['score'] / (1 + np.log(1 + obj[1]['posts_count'])) * (obj[1]['posts_count'] / obj[1]['total_posts_count']), reverse=True)
-#     data = list()
-#     tmp = defaultdict(dict)
-#     for obj, props in result:
-#         if props["score"] > 0:
-#             tmp[obj] = history[obj]
-#             row = {
-#                 'id': props['id'],
-#                 'name': props['name'],
-#                 'relation': '{0:.6f}'.format(props['relation'] / props['posts_count']),
-#                 'score': props['score'] / (1 + np.log(1 + props['posts_count'])) * (props['posts_count'] / props['total_posts_count']),
-#                 'comments_count': props['comments_count'],
-#                 'posts_count': props['posts_count'],
-#                 'total_comments_count': props['total_comments_count'],
-#                 'total_posts_count': props['total_posts_count'],
-#                 'avg_comments_count': '{0:.2f}'.format(props['comments_count'] / props['posts_count'])
-#             }
-#             data.append(row)
-#     ret = json.dumps({'data': data, 'history': tmp}, default=json_util.default)
-#     print(f'\n{time() - it}')
-#     return ret
+                keywords[word_class]['posts_count'] += 1 
+                keywords[word_class]['relation'] += relation
+                keywords[word_class]['likes_count'] += likes_count
+                keywords[word_class]['comments_count'] += comments_count
+                keywords[word_class]['score'] += relation * (comments_count + likes_count)
+    
+    print(len(posts))
+    return sorted(keywords.items(), key=lambda temp: temp[1]['score'] * temp[1]['posts_count'], reverse=True)
