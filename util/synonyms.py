@@ -47,6 +47,9 @@ def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))
 
 def find_synonyms(query_word, threshold=0.75):
+    if query_word not in model.wv:
+        return {query_word: 1}
+        
     positives = defaultdict(int)
     positives[query_word] = 1
     while True:

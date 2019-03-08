@@ -26,6 +26,9 @@ PARAM_K1 = 2.0
 PARAM_B = 0.75
 avdl = (39839103 + 46215754) / (1491207 + 1547773)
 
+def sigmoid(x):
+    return 1.0 / (1.0 + np.exp(-x))
+
 def bm25(value, dl): 
     global PARAM_K1
     global PARAM_B
@@ -82,7 +85,7 @@ def fb_query():
     for obj in fb_objects_ref.values():
         if obj['name'] != None and query_word in obj['name']:
             title_count += 1
-    title_count = float(np.log2(1+title_count))
+    title_count = float(np.log10( 9 + title_count))
     
     if is_in_vocab(query_word):
         wordset = find_synonyms(query_word, threshold)
@@ -123,7 +126,7 @@ def fb_query():
         obj_score[parent_id]['total_comments_count'] += comments_count
         obj_score[parent_id]['total_posts_count'] += 1
         title_relation = 0 if query_word not in parent_name else (3 / title_count)
-
+        ALPHA = 0
         # if fulltext_mode == True and 'sentence' in post:
         #     freq = len(re.findall(f'{(query_word)}', post['sentence']))
         #     relation = bm25(freq, post['words_count'])
@@ -136,9 +139,11 @@ def fb_query():
             relation = bm25(freq, post['words_count'])
             if relation > 0:
                 relation = ALPHA * title_relation +  (1 - ALPHA) * relation
-                normalized_comments_count = np.sqrt(1 + comments_count)
-                normalized_likes_count = np.sqrt(1 + likes_count)
-                score = relation * (normalized_comments_count + normalized_likes_count)
+                normalized_comments_count = np.log(1 + comments_count)
+                normalized_likes_count = np.log(1 + likes_count)
+                # score = relation * (normalized_comments_count + normalized_likes_count)
+                # score = relation * (np.sqrt(comments_count * 2.149)  + np.sqrt(likes_count))
+                score = relation * (comments_count * 2.149 + likes_count)
                 if score > 0:
                     history[parent_id][_id] = {
                         'relation': relation,
@@ -155,7 +160,9 @@ def fb_query():
                 obj_score[parent_id]['posts_count'] += 1                    
                 obj_score[parent_id]['score'] += score
 
-    result = sorted(obj_score.items(), key=lambda obj: obj[1]['score'] / (1 + np.log(1 + obj[1]['posts_count'])) * (obj[1]['posts_count'] / obj[1]['total_posts_count']), reverse=True)
+    # result = sorted(obj_score.items(), key=lambda obj: obj[1]['score'] / (1 + np.log(1 + obj[1]['posts_count'])) * obj[1]['posts_count'] / obj[1]['total_posts_count'], reverse=True)
+    # result = sorted(obj_score.items(), key=lambda obj: obj[1]['score'] * (sigmoid(obj[1]['posts_count'] / obj[1]['total_posts_count'] * 6) - 0.5) * 2 , reverse=True)
+    result = sorted(obj_score.items(), key=lambda obj: obj[1]['score'] * obj[1]['posts_count'] / obj[1]['total_posts_count'], reverse=True)
     data = list()
     tmp = defaultdict(dict)
     for obj, props in result:
@@ -171,6 +178,7 @@ def fb_query():
                 'posts_count': props['posts_count'],
                 'total_comments_count': props['total_comments_count'],
                 'total_posts_count': props['total_posts_count'],
+                'ratio': (sigmoid(props['posts_count'] / props['total_posts_count'] * 6) - 0.5) * 2,
                 'avg_comments_count': '{0:.2f}'.format(props['comments_count'] / props['posts_count']),
                 'like': -1 if 'like' not in fb_objects_ref[obj] else fb_objects_ref[obj]['like'],
                 'category': 'unknown' if 'type' not in fb_objects_ref[obj] else fb_objects_ref[obj]['type'],

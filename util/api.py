@@ -34,7 +34,7 @@ def rank_fb_posts(query_word, fb_id, start, end):
 
     options = default_options(start, end)
     options['parent_id'] = str(fb_id)
-    field = default_field()
+    field = default_fields()
     for post in fb_posts.find(options, field, no_cursor_timeout=True):
         properties = [0, 0, 0, ''] # relation, comments_count, words
         if 'global_tfidf' in post:
