@@ -46,6 +46,15 @@ def _levenshtein_distance(sentence1, sentence2):
 def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))
 
+def find_candidate(words):
+    positives = list()
+    for word in words:
+        if word in model:
+            positives.append(word)
+    candidate = model.wv.most_similar(positives, topn=10)
+    return candidate
+
+
 def find_synonyms(query_word, threshold=0.75):
     if query_word not in model.wv:
         return {query_word: 1}

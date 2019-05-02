@@ -16,18 +16,37 @@ client = MongoClient('localhost', 27017)
 database = client["research"]
 
 fb_objects = database['2018_fb_objects']
-fb_posts = database["2018_fb_posts"]
+fb_posts = database["201803-06_fb_posts"]
 fb_comments = database['2018_fb_comments']
 
 ptt_objects = database['2018_ptt_objects']
 ptt_posts = database["2018_ptt_posts"]
 ptt_comments = database['2018_ptt_comments']
 
+def strptime(date):
+    return datetime.strptime(date, f"%Y-%m-%d")
+
 def default_options(start, end):
-    return {'datetime_pub': {'$gte': datetime(2018, int(start), 1), '$lt': datetime(2018, int(end), 1)}}
+    print(start, end)
+    if type(start).__name__ == 'str' and type(end).__name__ == 'str':
+        return {'datetime_pub': {'$gte': strptime(start), '$lt':strptime(end)}}
+    elif type(start).__name__ == 'datetime' and type(end).__name__ == 'datetime':
+        return {'datetime_pub': {'$gte': start, '$lt':end}}
+    else:
+        return {'datetime_pub': {'$gte': datetime(2018, int(start), 1), '$lt': datetime(2018, int(end), 1)}}
 
 def default_fields():
-    return {'id':1, 'parent_id':1, 'parent_name': 1,'comments_count': 1, "datetime_pub": 1}
+    return {
+        'id':1,
+        'parent_id':1,
+        'parent_name': 1,
+        'parent_words_count': 1,
+        'words_count': 1,
+        'comments_content': 1,
+        'comments_words_count': 1,
+        'comments_count': 1,
+        "datetime_pub": 1
+        }
 
 def rank_fb_posts(query_word, fb_id, start, end):
     post_score = defaultdict(list)
@@ -71,7 +90,7 @@ def rank_fb_posts(query_word, fb_id, start, end):
 def to_dataframe(result):
     data = defaultdict(list)
     for obj, value in result:
-        obj = find_fb_obj(obj)
+        obj = fb_objects.find_one({ 'id':obj })
         data['id'].append(obj['id'])
         data['name'].append(obj['name'])
         data['relation'].append(value[0])
