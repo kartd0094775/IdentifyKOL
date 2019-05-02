@@ -6,7 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Test</title>
 </head>
-<link rel="stylesheet" type="text/css" href="semantic/semantic.min.css">
+<link rel="stylesheet" type="text/css" href="semantic/dist/semantic.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.min.css">
 <script
   src="https://code.jquery.com/jquery-3.1.1.min.js"
@@ -16,11 +16,11 @@
 <script src="https://momentjs.com/downloads/moment.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.3/Chart.min.js"></script>
 <script src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.min.js"></script>
-<script src="semantic/semantic.min.js"></script>
+<script src="semantic/dist/semantic.min.js"></script>
 <body>
     <div class="ui container segment">
         <div class="ui input">
-            <input type="text" name="keyword" id="keyword" placeholder="關鍵字" value="電影">
+            <input type="text" name="keyword" id="keyword" placeholder="關鍵字" value="愛情">
             <input type="text" name="start" id="start" value="1">
             <input type="text" name="end" id="end" value="2">
         </div>
@@ -213,7 +213,7 @@
             method: 'POST',
             body: JSON.stringify(data)
         }
-        const query_entity =  fetch('http://140.112.30.226:9527/api/query/ptt/', requestOptions).then(
+        const query_entity =  fetch('/api/query/ptt/', requestOptions).then(
             response => {
                     // if (!response.ok) {
                     //     return Promise.reject(response.statusText)
