@@ -1,15 +1,18 @@
 from collections import defaultdict
-from flask import Blueprint
-from flask import request
+from flask import Blueprint, request, abort
 from time import sleep, time
+import dill as pkl
 import pandas as pd
 import numpy as np
+import hashlib
 import pymongo
 import json
 import operator
 import sys
 import re
 import gc
+
+from pprint import pprint
 from pymongo import MongoClient
 from bson import json_util
 from datetime import datetime
@@ -32,6 +35,14 @@ FB_AVG_LENGTH = {
     'article': (39839103 + 46215754) / (1491207 + 1547773),
     'comment': (24586783) / 1547774
 }
+
+PTT_AVG_LENGTH = {
+    'title': 10838625 / 2632314,
+    'article': 210163557 / 2632314,
+    'comment': 180204594 / 2632314
+}
+
+
 fb_avtl = (32739) / 14041
 # fb_avcl = (468271862) / 1547774
 fb_avcl = (24586783) / 1547774
@@ -41,7 +52,35 @@ fb_max_commnets_count = 82453
 fb_total_likes_count = 233203525
 fb_total_comments_count = 24586783
 
-def preload(post_tag=False):
+def gen_signature(req):
+        m = hashlib.md5()
+        signiture = ''
+        for key, value in req.items():
+            if key == 'relation_boosts':
+                signiture += " ".join(list(value.values()))
+            elif key == 'keywords':
+                keywords = value.split(' ')
+                keywords = sorted(keywords)
+                signiture += " ".join(keywords)
+            elif key != 'result' and key !='rate':
+                signiture += str(value)
+        m.update(signiture.encode('utf-8'))
+        return m.hexdigest()
+
+def preload_ptt():
+    options = {}
+    options['content'] = {'$ne': None}
+    fields = default_fields()
+    fields['titles_words_count'] = 1
+    fields['words_count'] = 1
+    fields['comments_words_count'] = 1
+    fields['comments_content'] = 1
+    fields['reaction_count'] = 1
+    ptt_posts_list = list(ptt_posts.find(options, fields, no_cursor_timeout=True).sort([('datetime_pub', 1)]))
+
+    return ptt_posts_list
+
+def preload_facebook(post_tag=False):
     fb_posts_list = list()
     if post_tag ==True:
         options = default_options(3, 6)
@@ -83,7 +122,8 @@ def BM25F(fields):
         weight += ( props['freq'] * props['boost'] ) / (1 - PARAM_B + PARAM_B * (props['dl'] / FB_AVG_LENGTH[key]))
     return weight / (PARAM_K1 + weight)
 
-fb_posts_list, fb_objects_ref = preload(True)
+fb_posts_list, fb_objects_ref = preload_facebook(True)
+# ptt_posts_list = preload_ptt()
 print('preloading finished!')
 
 def calculate(start, end, prog, transformation, relation_boosts):
@@ -155,17 +195,17 @@ def calculate(start, end, prog, transformation, relation_boosts):
             fields['comment']['dl'] = post['comments_words_count']
             fields['comment']['boost'] = float(relation_boosts['comment'])
         relation = BM25F(fields)
-
-        history[parent_id][_id] = {
-            'relation': relation,
-            'likes_count': likes_count,
-            'comments_count': comments_count,
-            'trans_comments_count': trans_comments_count,
-            'trans_likes_count': trans_likes_count,
-            'datetime_pub': datetime_pub,
-            'positive': positive,
-            'negative': negative,
-        }
+        if (comments_count > 0 or likes_count > 0) and relation > 0:
+            history[parent_id][_id] = {
+                'relation': relation,
+                'likes_count': likes_count,
+                'comments_count': comments_count,
+                'trans_comments_count': trans_comments_count,
+                'trans_likes_count': trans_likes_count,
+                'datetime_pub': datetime_pub,
+                'positive': positive,
+                'negative': negative,
+            }
 
     return obj_score, history, global_comments_count, global_likes_count
 
@@ -223,13 +263,15 @@ def fb_query():
               num:
                 type: string
                 example: "10"
+              type:
+                type: string
+                example: "main"
     responses:
         200:
             ret: return value
     """
     it = time()
     req = request.get_json()
-    print(req)
     query_word = req['keywords']
     transformation = req['transformation']
     relation_boosts = req['relation_boosts']
@@ -237,6 +279,19 @@ def fb_query():
     start = req['start']
     end = req['end']
     num = int(req['num'])
+    sig = gen_signature(req)
+    print(f'[main] {req}')
+    print(f'[main] {sig}')
+
+    try:
+        with open(f'./result/{sig}.pkl', 'rb') as f:
+            ret = pkl.load(f)
+            ret = json.dumps(ret, default=json_util.default)
+            print(f'\n{time() - it}')
+            gc.collect()
+            return ret
+    except:
+        print('[main] first query!')
 
     try: 
         wordset = query_word.split(' ')
@@ -301,9 +356,10 @@ def fb_query():
                 'tag': "" if 'tag' not in fb_objects_ref[obj] else " ".join(fb_objects_ref[obj]['tag'])
             }
             data.append(row)
-            if len(data) == num: break
 
     ret = json.dumps({'data': data, 'history': tmp}, default=json_util.default)
+    with open(f'./result/{sig}.pkl', 'wb') as f:
+        pkl.dump({'data': data, 'history': tmp}, f)
     print(f'\n{time() - it}')
     gc.collect()
     return ret
@@ -429,3 +485,18 @@ def ptt_query():
     ret = json.dumps({'data': data, 'history': tmp}, default=json_util.default)
     print(f'\n{time() - it}')
     return ret
+
+
+@query_page.route('/save/', methods=['POST'])
+def save_result():
+    try:
+        it = datetime.now()
+        req = request.get_json()
+
+        if 'result' in req and len(req['result']) > 0:
+            with open('./evaluation/{}.pkl'.format(it.strftime('%Y%m%d_%H%m%S_%f')), 'wb') as f:
+                pkl.dump(req, f)
+        return json.dumps({'message': "ok"})
+    except Exception as e:
+        print(e)
+        return abort(500)

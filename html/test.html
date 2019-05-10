@@ -7,12 +7,12 @@
     <title>Facebook Query</title>
 </head>
 <link rel="stylesheet" type="text/css" href="semantic/dist/semantic.min.css">
-<link rel="stylesheet" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="css/jquery.dataTables.min.css">
 <script src="js/jquery-3.3.1.min.js"></script>
 <script src="js/api.js" type="text/javascript"></script>
-<script src="https://momentjs.com/downloads/moment.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.3/Chart.min.js"></script>
-<script src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.min.js"></script>
+<script src="js/moment.js"></script>
+<script src="js/Chart.min.js"></script>
+<script src="js/jquery.dataTables.min.js"></script>
 <script src="semantic/dist/semantic.min.js"></script>
 <style>
 	.slider {
@@ -42,6 +42,7 @@
 </style>
 
 <body>
+    
     <div class="ui container segment">
         <div class="ui container segment">
             <div class="ui fluid input">
@@ -60,19 +61,19 @@
 					<div class="field">
 						<div class="ui radio checkbox">
 							<input type="radio" class="influenceTrans" name="influenceTrans" value="linear" checked="checked">
-							<label>偏重留言數</label>
+							<label>偏重留言數(線性轉換)</label>
 						</div>
 					</div>
 					<div class="field">
 						<div class="ui radio checkbox">
 							<input type="radio" class="influenceTrans" name="influenceTrans" value="sqrt">
-							<label>適中</label>
+							<label>適中(開根號)</label>
 						</div>
 					</div>
 					<div class="field">
 						<div class="ui radio checkbox">
 							<input type="radio" class="influenceTrans" name="influenceTrans" value="log">
-							<label>偏重相關性</label>
+							<label>偏重相關性(取對數)</label>
 						</div>
 					</div>
 				</div>
@@ -84,7 +85,7 @@
 					<div class="field">
 						<div class="slideContainer">				
 							<label>標題相關性</label>
-							<input type="range" min="0" max="1" step="0.1" value="0.3" class="slider" id="titleRelation">
+							<input type="range" min="0" max="1" step="0.1" value="0.2" class="slider" id="titleRelation">
 						</div>
 					</div>
 					<div class="field">
@@ -127,10 +128,28 @@
 					</div>
 				</div>
 			</div>
+            <br><br>
+            <div class="ui form">
+                <div class="grouped fields">
+                    <label>同時搜尋</label>
+                    <div class="field">
+                        <div class="ui checkbox">
+                            <input type="checkbox" id="toggle_facebook" checked/>
+                            <label>Facebook</label>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <div class="ui checkbox">
+                            <input type="checkbox" id="toggle_google" checked/>
+                            <label>Google</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
 			<br><br>
 			<div class="ui input">
-				<input type="date" name="start" id="start" value="2018-04-01">
-				<input type="date" name="end" id="end" value="2018-05-01">
+				<input type="date" name="start" id="start" value="2018-03-01">
+				<input type="date" name="end" id="end" value="2018-06-01">
 			</div>
 			<button class="ui primary button" name="submit" onclick="query('all')">查詢</button>
         </div>
@@ -156,54 +175,68 @@
         </div>
         <hr>
         <br/><br/>
-        <div>
-            <h2>Facebook Result</h2>
-            <table class="display" id="facebook_table">
-                <thead>
-                    <tr>
-                        <th>name</th>
-                        <th>link</th>
-                        <th>rate</th>  
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+        <div class="ui top attached tabular menu">
+            <a class="item active" data-tab="first">Main</a>
+            <a class="item" data-tab="second">Facebook</a>
+            <a class="item" data-tab="third">Google</a>
         </div>
-        <div>
-            <h2>Google Result</h2>
-            <table class="display" id="google_table">
-                <thead>
-                    <tr>
-                        <th>name</th>
-                        <th>link</th>
-                        <th>rate</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
-        <div>
+        <div class="ui bottom attached tab segment active" data-tab="first">
             <h2>Main Result</h2>
             <table class="display" id="main">
                 <thead>
                     <tr>
-                        <th>link</th>
+                        <th>no</th>
                         <th>name</th>
-                        <th>category</th>
-                        <th>tag</th>
-                        <th>relation</th>
-                        <th>likes</th>
-                        <th>comments</th>
-                        <th>total_comments</th>
-                        <th>posts</th>
-                        <th>posts / total_posts</th>
-                        <th>score</th>
-                        <th>rate</th>
+                        <th>link</th>
+                        <th>粉絲團類別</th>
+                        <th>標籤</th>
+                        <th>相關性</th>
+                        <th>相關貼文讚數</th>
+                        <th>相關貼文留言數</th>
+                        <th>總貼文留言數</th>
+                        <th>相關貼文數</th>
+                        <th>相關貼文數／總貼文數</th>
+                        <th>主系統分數</th>
+                        <th>評分</th>
+                        <th>註記</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
             </table>
         </div>
+        <div class="ui bottom attached tab segment" data-tab="second">
+            <h2>Facebook Result</h2>
+            <button class="ui primary button" onclick="load_score()">載入系統分數</button>  
+            <table class="display" id="facebook_table">
+                <thead>
+                    <tr>
+                        <th>no</th>
+                        <th>name</th>
+                        <th>link</th>
+                        <th>主系統分數</th>
+                        <th>評分</th>
+                        <th>註記</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="ui bottom attached tab segment" data-tab="third">
+            <h2>Google Result</h2>
+            <table class="display" id="google_table">
+                <thead>
+                    <tr>
+                        <th>no</th>
+                        <th>name</th>
+                        <th>link</th>
+                        <th>評分</th>
+                        <th>註記</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <button class="ui fluid primary button" name="submit" onclick="download()">下載結果</button>
         <br/><br/>
         <div class="ui container segment">
             <div class="ui form">
@@ -224,11 +257,12 @@
             <table class="display" id="sub">
                 <thead>
                     <tr>
+                        <th>no</th>
                         <th>id</th>
-                        <th>relation</th>
-                        <th>likes</th>
-                        <th>comments</th>
-                        <th>score</th>
+                        <th>相關性</th>
+                        <th>讚數</th>
+                        <th>留言數</th>
+                        <th>分數</th>
                         <th>datetime</th>
                     </tr>
                 </thead>
@@ -245,15 +279,71 @@
     let GOOGLE_TABLE = null;
 	
     let config = null;
+    
+    const set_table_input_change = () => {
+        $("#main td input").on('change', function() {
+            const $tr = $(this).closest('tr')
+            const index = parseInt($tr.find('td')[0].innerHTML, 10) - 1
+            if (window.response) {
+                window.response.data[index]['rate'] = this.value
+            }
+        })
+        $("#main td textarea").on('change', function() {
+            const $tr = $(this).closest('tr')
+            const index = parseInt($tr.find('td')[0].innerHTML, 10) - 1
+            if (window.response) {
+                window.response.data[index]['textarea'] = this.value
+            }
+        });
+        $("#facebook_table td input").on('change', function() {
+            const $tr = $(this).closest('tr')
+            const index = parseInt($tr.find('td')[0].innerHTML, 10) - 1
+            if (window.facebook) {
+                window.facebook[index]['rate'] = this.value
+            }
+        })
+        $("#facebook_table td textarea").on('change', function() {
+            const $tr = $(this).closest('tr')
+            const index = parseInt($tr.find('td')[0].innerHTML, 10) - 1
+            if (window.facebook) {
+                window.facebook[index]['textarea'] = this.value
+            }
+        });
+        $("#google_table td input").on('change', function() {
+            const $tr = $(this).closest('tr')
+            const index = parseInt($tr.find('td')[0].innerHTML, 10) - 1
+            if (window.google) {
+                window.google[index]['rate'] = this.value
+            }
+        })
+        $("#google_table td textarea").on('change', function() {
+            const $tr = $(this).closest('tr')
+            const index = parseInt($tr.find('td')[0].innerHTML, 10) - 1
+            if (window.google) {
+                window.google.data[index]['textarea'] = this.value
+            }
+        });
+    }
+    
     $( document ).ready(() => {
+        $('.menu .item').tab();
         $('#candidates').dropdown();
-        recommend()
+        $.fn.dataTableExt.ofnSearch['html-input'] = function(value) {
+            return $(value).val;
+        };
+        recommend() // refresh recommended words
         MAIN_TABLE = $("#main").DataTable({
+                "fnDrawCallback": set_table_input_change,
                 "paging": true,
                 "info": true,
                 "searching": true,
                 "bSort": false,
+                "columnDefs": [
+                    { "type": "html-input", "targets": [13] }
+                ], 
                 "columns": [
+                    { "data": "no" },
+                    { "data": "name", },
                     {
                         "data": "id",
                         "render": ( data, type, row, meta ) => {
@@ -264,7 +354,6 @@
                             return data
                         }
                     },
-                    { "data": "name", },
                     { "data": "category" },
                     { "data": "tag" },
                     { "data": "relation" },
@@ -273,36 +362,19 @@
                     { "data": "total_comments_count" },
                     { "data": "posts_count" },
                     { "data": "total_posts_count" },
-                    { "data": "score"},
-                    { "data": "rate"}
+                    { "data": "score" },
+                    { "data": "rate" },
+                    { "data": "textarea" }
                 ]
             })
         FACEBOOK_TABLE = $('#facebook_table').DataTable({
+            "fnDrawCallback": set_table_input_change,
             "paging": true,
             "info": true,
             "searching": true,
             "bSort": false,
             "columns": [
-                { "data": "name" },
-                {
-                    "data": "link",
-                    "render": (data, type, row, meta) => {
-                        if (type === "display") {
-                            return '<a href="' + data + '">' + data + '</a>'
-                        }
-                        return data
-                    }
-                
-                },
-                { "data": "rate" }
-            ]
-        })
-        GOOGLE_TABLE = $('#google_table').DataTable({
-            "paging": true,
-            "info": true,
-            "searching": true,
-            "bSort": false,
-            "columns": [
+                { "data": "no" },
                 { "data": "name" },
                 {
                     "data": "link",
@@ -314,7 +386,32 @@
                     }
                 
                 },
-                { "data": "rate" }
+                { "data": "score"},
+                { "data": "rate" },
+                { "data": "textarea"}
+            ]
+        })
+        GOOGLE_TABLE = $('#google_table').DataTable({
+            "fnDrawCallback": set_table_input_change,
+            "paging": true,
+            "info": true,
+            "searching": true,
+            "bSort": false,
+            "columns": [
+                { "data": "no" },
+                { "data": "name" },
+                {
+                    "data": "link",
+                    "render": (data, type, row, meta) => {
+                        if (type === "display") {
+                            return '<a href="' + data + '">link</a>'
+                        }
+                        return data
+                    }
+                
+                },
+                { "data": "rate" },
+                { "data": "textarea" }
             ]
         })
         SUB_TABLE = $("#sub").DataTable({
@@ -323,12 +420,13 @@
                 "searching": true,
                 "bSort": false,
                 "columns": [
+                    { "data": "no" },
                     {
                         "data": "id",
                         "render": ( data, type, row, meta ) => {
                             if (type === "display") {
                                 let link = "https://facebook.com/" + data
-                                data = '<a href="' + link + '">' + link + '</a>'
+                                data = '<a href="' + link + '">link</a>'
                             }
                             return data
                         }
@@ -341,6 +439,7 @@
                 ]
         })
     })
+    
     const join = () => {
         let temp = {};
         let finalString = '';
@@ -362,6 +461,7 @@
         $('#candidates').dropdown('clear');
 
     }
+    
     const recommend = () => {
         $('#candidates').dropdown('clear');
         $('#candidates').empty()
@@ -380,6 +480,7 @@
             $(".ui.segment").dimmer("hide")
         })
     };
+    
     const query = (type) => {
         $(".ui.segment").dimmer("show");
         let data = {
@@ -393,15 +494,24 @@
 			stats_type: $('.statsType:checked')[0].value,
             start: $('#start')[0].value,
             end: $('#end')[0].value,
-            num: 10
+            num: "10"
         };
         if (type === 'all') {   
             $('#facebook_keywords')[0].value = data['keywords']
             $('#google_keywords')[0].value = data['keywords']
-            const p1 = rank_facebook(data)
-            const p2 = scape_facebook(data)
-            const p3 = scape_google(data)
-            Promise.all([p1, p2, p3]).then(() => { $(".ui.segment").dimmer("hide") })
+
+            const mission = [rank_facebook(data)]
+            
+            if ($('#toggle_facebook')[0].checked) {
+                mission.push(scape_facebook(data))
+            }
+            
+            if ($('#toggle_google')[0].checked) {
+                mission.push(scape_google(data))
+            }
+            Promise.all(mission).then(() => { 
+                $(".ui.segment").dimmer("hide")
+            })
         } else if (type === 'facebook') {
             data['keywords'] = $('#facebook_keywords')[0].value
             const p2 = scape_facebook(data).then(() => { $(".ui.segment").dimmer("hide") })
@@ -412,118 +522,336 @@
         console.log(data)
 
     };
+    
     const search_object_posts = () => {
         $(".ui.segment").dimmer("show");
-        const data = {
-            'url': $('#object_link')[0].value,
-            'start': $('#start')[0].value,
-            'end': $('#end')[0].value
-        }
+        let data = {
+            keywords: $('#keywords')[0].value,
+			transformation: $('.influenceTrans:checked')[0].value,
+			relation_boosts: {
+				'title': $('#titleRelation')[0].value,
+				'article': $('#articleRelation')[0].value,
+				'comment': $('#commentRelation')[0].value,
+			},
+			stats_type: $('.statsType:checked')[0].value,
+            start: $('#start')[0].value,
+            end: $('#end')[0].value,
+            num: "10",
+            url: $('#object_link')[0].value,
+        };
         const result = fetch_object_posts(data).then( result => {
             SUB_TABLE.clear()
             console.log(result)
             if (Object.keys(result['history']).length > 0) {                
                 let object_name = result['history']['name']
                 $("#object_name").text(object_name)
-                for (let [key, value] of Object.entries(result['history']['posts'])) {
-                    console.log(value)
+                for (let [index, value] of Object.entries(result['history']['posts'])) {
                     SUB_TABLE.row.add({
+                        "no": index + 1,
                         "id": value['id'],
                         "relation": value['relation'],
                         "likes_count": value['likes_count'],
                         "comments_count": value['comments_count'],
                         "score": value['score'],
                         "datetime": moment(value['datetime_pub']["$date"]).format('lll')
-                    }).draw( false )
+                    })
                 }
             }
+            SUB_TABLE.draw( false )
             $(".ui.segment").dimmer("hide")
         })
     }
+    
     const rank_facebook = (data) => {
+        data['type'] = 'main'
         return fetch_rank_facebook(data).then( result => {
             MAIN_TABLE.clear();
             window.response = result;
             result.data.map(( value, index ) => {
                 let row = Object.assign({}, value)
-                row["name"] = `<a href="#object" onclick=select(${index})>${value['name']}</a>`
-                const $select = $("<select></select>", {
-                    "class": "facebook_rate"
+                row['no'] = index + 1
+                row["name"] = `<a href="#object" onclick='select("${value['id']}", "${value['name']}")'>${value['name']}</a>`
+                const $div = $("<div></div>", {
+                    "class": "main_rate"
                 });
-                for (let i=0; i<=10; i++) {
-                    const $option = $("<option></option>", {
-                        "text": i,
-                        "value": i
+                for (let i=5; i>0; i--) {
+                    const $radio = $("<input/>", {
+                        "value": i,
+                        "type": "radio",
+                        "name": "main_rate_" + index
                     });
-                    $select.append($option);
+                    const $label = $("<label>" + i + "</label><br/>")
+                    $div.append($radio);
+                    $div.append($label);
                 };
-                row["rate"] = $select[0].outerHTML;
-                MAIN_TABLE.row.add(row).draw( false )
+                const $textarea = $('<textarea></textarea>')
+                row["rate"] = $div[0].outerHTML;
+                row["textarea"] = $textarea[0].outerHTML;
+                MAIN_TABLE.row.add(row)
             })
+            MAIN_TABLE.draw( false )
+            set_table_input_change()
             console.log(result);
 
         });
     }
+    
     const scape_facebook = (data) => {
+        data["type"] = "facebook"
+        data["num"] = "100"
         return fetch_scape_facebook(data).then( result => {
             FACEBOOK_TABLE.clear();
+            window.facebook = result.data;
             result.data.map(( value, index ) => {
                 let row = Object.assign({}, value)
-                const $select = $("<select></select>", {
+                row["no"] = index + 1
+                row["name"] = `<a href="#object" onclick='select("${value['id']}", "${value['name']}")'>${value['name']}</a>`
+                const $div = $("<div></div>", {
                     "class": "facebook_rate"
                 });
-                for (let i=0; i<=10; i++) {
-                    const $option = $("<option></option>", {
-                        "text": i,
-                        "value": i
+                for (let i=5; i>0; i--) {
+                    const $radio = $("<input/>", {
+                        "value": i,
+                        "type": "radio",
+                        "name": "facebook_rate_" + index
                     });
-                    $select.append($option);
+                    const $label = $("<label>" + i + "</label><br/>")
+                    $div.append($radio);
+                    $div.append($label);
                 };
-                row["rate"] = $select[0].outerHTML;
-                FACEBOOK_TABLE.row.add(row).draw( false )
+                const $textarea = $('<textarea></textarea>')
+                row["rate"] = $div[0].outerHTML;
+                row["textarea"] = $textarea[0].outerHTML;;
+                FACEBOOK_TABLE.row.add(row)
             })
+            FACEBOOK_TABLE.draw( false );
+            set_table_input_change()
             console.log(result)
         });
     
     }
+    
     const scape_google = (data) => {
+        data["type"] = "google"
+        data["num"] = "100"
         return fetch_scape_google(data).then( result => {
             GOOGLE_TABLE.clear();
+            window.google = result.data;
             result.data.map(( value, index ) => {
                 let row = Object.assign({}, value)
-                const $select = $("<select></select>", {
+                row["no"] = index + 1
+                const $div = $("<div></div>", {
                     "class": "google_rate"
                 });
-                for (let i=0; i<=10; i++) {
-                    const $option = $("<option></option>", {
-                        "text": i,
-                        "value": i
+                for (let i=5; i>0; i--) {
+                    const $radio = $("<input/>", {
+                        "value": i,
+                        "type": "radio",
+                        "name": "google_rate_" + index
                     });
-                    $select.append($option);
+                    const $label = $("<label>" + i + "</label><br/>")
+                    $div.append($radio);
+                    $div.append($label);
                 };
-                row["rate"] = $select[0].outerHTML;
-                GOOGLE_TABLE.row.add(row).draw( false )
+                const $textarea = $("<textarea></textarea>")
+                row["rate"] = $div[0].outerHTML;
+                row["textarea"] = $textarea[0].outerHTML;
+                GOOGLE_TABLE.row.add(row)
             })
+            GOOGLE_TABLE.draw( false );
+            set_table_input_change()
             console.log(result)
         });
     
     }
-    const select = (index) => {
+    
+    const select = (object_id, object_name) => {
         SUB_TABLE.clear()
-        let object_id = window.response.data[index]['id']
-        let object_name = window.response.data[index]['name']
         $("#object_name").text(object_name)
-        for (let [key, value] of Object.entries(window.response.history[object_id])) {
-            SUB_TABLE.row.add({
-                "id": key,
-                "type": value['type'],
-                "relation": value['relation'],
-                "likes_count": value['likes_count'],
-                "comments_count": value['comments_count'],
-                "score": value['score'],
-                "datetime": moment(value['datetime_pub']["$date"]).format('lll')
-            }).draw( false )
+        if (object_id in window.response.history) {
+            cnt = 1
+            for (let [key, value] of Object.entries(window.response.history[object_id])) {
+                SUB_TABLE.row.add({
+                    "no": cnt,
+                    "id": key,
+                    "type": value['type'],
+                    "relation": value['relation'],
+                    "likes_count": value['likes_count'],
+                    "comments_count": value['comments_count'],
+                    "score": value['score'],
+                    "datetime": moment(value['datetime_pub']["$date"]).format('lll')
+                })
+                cnt += 1
+            }
+        }
+        SUB_TABLE.draw( false );
+    }
+    
+    const download = () => {
+        keywords = $('#keywords')[0].value
+        transformation =  $('.influenceTrans:checked')[0].value
+		title = $('#titleRelation')[0].value
+        article = $('#articleRelation')[0].value
+        comment = $('#commentRelation')[0].value
+        stats_type = $('.statsType:checked')[0].value
+        start = $('#start')[0].value
+        end = $('#end')[0].value
+        num = "10"
+        
+        let csvContent = [`data:text/csv;charset=utf-8,\n${keywords}_${transformation}_${title}:${article}:${comment}_${stats_type}_${start}_${end}_${num},main_粉絲團名稱,main_連結,main_系統分數,main_評分, main_註記, facebook_粉絲團名稱,facebook_連結,facebook_評分,facebook_註記,google_網頁名稱,google_連結,google_評分,google_註記`];
+        if (window.response) {
+            for (i = 0; i < 100; i++) {
+                let row = [i]
+                let main = window.response.data[i]
+                let facebook = (window.facebook && window.facebook[i]) ? window.facebook[i] : null
+                let google = (window.google && window.google[i]) ? window.google[i] : null
+                if (main) {
+                    row.push(main['name'].replace(/#|,/g, ''))
+                    row.push(`https://facebook.com/${main['id']}`)
+                    row.push(main['score'])
+                    row.push((main['rate']) ? main['rate'] : 'NULL')
+                    row.push((main['textarea']) ? main['textarea'] : 'NULL')
+                } else {
+                    row = row.concat(['NULL', 'NULL', 'NULL', 'NULL'])
+                }
+                if (facebook) {
+                    row.push(facebook['name'].replace(/#|,/g, ''))
+                    row.push(facebook['link'])
+                    row.push((facebook['rate']) ? facebook['rate'] : 'NULL')
+                    row.push((facebook['textarea']) ? facebook['textarea'] : 'NULL')
+                } else {
+                    row = row.concat(['NULL', 'NULL', 'NULL', 'NULL'])
+                }
+                if (google) {
+                    row.push(google['name'].replace(/#|,/g, ''))
+                    row.push(google['link'])
+                    row.push((google['rate']) ? google['rate'] : 'NULL')
+                    row.push((google['textarea']) ? google['textarea'] : 'NULL')
+                } else {
+                    row = row.concat(['NULL', 'NULL', 'NULL', 'NULL'])
+                }
+                
+                csvContent.push(row.join(","))
+            }
+            const encodedUri = encodeURI(csvContent.join("\n"));
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `${moment().format('YYYYMMDD')}_${keywords}.csv`);
+            document.body.appendChild(link); // Required for FF
+            console.log(link.href)
+
+            link.click(); // This will download the data file named "my_data.csv".
+        }  
+//        if (window.response) {
+//        }
+//        if (window.facebook) {
+//            data['keywords'] = $('#facebook_keywords')[0].value
+//            data['result'] = window.facebook
+//            const $select = $('.facebook_rate')
+//            for (let i of Object.keys(window.facebook)) {
+//                data.rate.push($select[i].value)
+//            }
+//        } else if (window.google) {
+//            data['keywords'] = $('#google_keywords')[0].value
+//            data['result'] = window.google
+//            const $select = $('.google_rate')
+//            for (let i of Object.keys(window.google)) {
+//                data.rate.push($select[i].value)
+//            }
+//        } else if (window.response) {
+//            data['keywords'] = $('#keywords')[0].value
+//            data['result'] = window.response.data
+//            const $select = $('.main_rate')
+//            for (let i of Object.keys(window.response.data)) {
+//                data.rate.push($select[i].value)
+//            }   
+//        }
+//        console.log(data)
+//        fetch_save_result(data).then(result => alert(result.message))
+    }
+    
+    const load_score = () => {
+        let data = {
+            keywords: $('#facebook_keywords')[0].value,
+			transformation: $('.influenceTrans:checked')[0].value,
+			relation_boosts: {
+				'title': $('#titleRelation')[0].value,
+				'article': $('#articleRelation')[0].value,
+				'comment': $('#commentRelation')[0].value,
+			},
+			stats_type: $('.statsType:checked')[0].value,
+            start: $('#start')[0].value,
+            end: $('#end')[0].value,
+            num: "10",
+            type: "main",
+        };
+        if (window.facebook) {
+            data['result'] = window.facebook
+            fetch_load_result(data).then( (result) => {
+                window.facebook = result.data
+                FACEBOOK_TABLE.clear();
+                window.facebook.map(( value, index ) => {
+                    let row = Object.assign({}, value)
+                    row['no'] = index + 1
+                    row["name"] = `<a href="#object" onclick='select("${value['id']}", "${value['name']}")'>${value['name']}</a>`
+                    const $div = $("<div></div>", {
+                        "class": "facebook_rate"
+                    });
+                    for (let i=5; i>0; i--) {
+                        const $radio = $("<input/>", {
+                            "type": "radio",
+                            "name": "facebook_rate_" + index
+                        });
+                        const $label = $("<label>" + i + "</label><br/>")
+                        $div.append($radio);
+                        $div.append($label);
+                    };
+                    $textarea = $('<textarea></textarea>')
+                    row["rate"] = $div[0].outerHTML;
+                    row["textarea"] = $textarea[0].outerHTML;
+                    FACEBOOK_TABLE.row.add(row)
+                })
+                FACEBOOK_TABLE.draw( false );
+                set_table_input_change()
+                
+                if (result.message) {
+                    alert(result.message)
+                } else {
+                    alert('載入完成')
+                }
+            })
         }
     }
+//    const load_score() => {
+//        const scores = {}
+//        if (window.response && widow.facebook) {
+//            for (let props of Object.values(window.reponse.data)) {
+//                scores[props['id']] = props['score'] 
+//            }
+//        }
+//        FACEBOOK_TABLE.clear();
+//        window.facebook.map(( value, index ) => {
+//            let row = Object.assign({}, value)
+//            if (row['id'] in socres) {
+//                row['name'] = 
+//                row['score'] = scores[row['id']]
+//            }
+//            const $div = $("<div></div>", {
+//                "class": "facebook_rate"
+//            });
+//            for (let i=1; i<=5; i++) {
+//                const $radio = $("<input/>", {
+//                    "type": "radio",
+//                    "name": "facebook_rate_" + index
+//                });
+//                const $label = $("<label>" + i + "</label><br/>")
+//                $div.append($radio);
+//                $div.append($label);
+//            };
+//            row["rate"] = $div[0].outerHTML;
+//            FACEBOOK_TABLE.row.add(row)
+//        })
+//        FACEBOOK_TABLE.draw( false );
+//    }
 </script>
 </html>
